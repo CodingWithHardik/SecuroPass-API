@@ -1,0 +1,35 @@
+model Passes {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  code String @unique
+  isUsed Boolean @default(false)
+  usedAt DateTime?
+  isRevoked Boolean @default(false)
+  revokedAt DateTime?
+  validUntil DateTime
+  validFrom DateTime
+  passesStatus PassesStatus @default(ACTIVE)
+  generatedByOrgUserId String
+  generatedByTeamUserId String
+  eventId String
+  assignedToId String?
+  events Events @relation(fields: [eventId], references: [id])
+  assignedTo User? @relation(fields: [assignedToId], references: [id])
+  generatedBy PassesGenerationBy @default(SYSTEM)
+  genertedByTeam EventTeam @relation(fields: [generatedByTeamUserId], references: [id])
+  genertedByOrg OrganizationUser @relation(fields: [generatedByOrgUserId], references: [id])
+}
+
+enum PassesStatus {
+  ACTIVE
+  USED
+  REVOKED
+  EXPIRED
+}
+
+enum PassesGenerationBy {
+  ORGANIZATION_USER
+  EVENT_TEAM_MEMBER
+  SYSTEM
+}

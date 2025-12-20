@@ -1,0 +1,41 @@
+model Events {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name String
+  description String?
+  date DateTime
+  time DateTime
+  location String
+  locationLongitude Float
+  locationLatitude Float
+  bannerImage String @default("https://example.com/default-event-banner.png")
+  bannerLogoImage String @default("https://example.com/default-event-logo.png")
+  generatedById String
+  organizationId String
+  passes Passes[]
+  eventTeam EventTeam[]
+  organization Organization @relation(fields: [organizationId], references: [id])
+  generatedBy OrganizationUser @relation(fields: [generatedById], references: [id])
+}
+
+model EventTeam {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  eventId String
+  userId String
+  addedById String
+  role TeamRole @default(PASSES_SCANNER)
+  addedBy OrganizationUser @relation(fields: [addedById], references: [id])
+  event Events @relation(fields: [eventId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+  passes Passes[]
+}
+
+enum TeamRole {
+  MANAGER
+  PASSES_MANAGER
+  PASSES_SHARER
+  PASSES_SCANNER
+}

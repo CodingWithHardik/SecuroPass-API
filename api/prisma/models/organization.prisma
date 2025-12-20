@@ -1,0 +1,35 @@
+model Organization {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name String
+  description String?
+  profileImage String @default("https://example.com/default-org-profile.png")
+  bannerImage String @default("https://example.com/default-org-banner.png")
+  location String?
+  locationLongitude Float?
+  locationLatitude Float?
+  website String?
+  members OrganizationUser[]
+  passes Events[]
+}
+
+model OrganizationUser {
+  id String @id @default(cuid())
+  joinedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organizationId String
+  userId String
+  role OrgRole @default(MEMBER)
+  user User @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  events Events[]
+  passes Passes[]
+  eventTeams EventTeam[]
+}
+
+enum OrgRole {
+  OWNER
+  SUPER_MANAGER
+  MEMBER
+}

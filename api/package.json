@@ -1,0 +1,22 @@
+{
+  "name": "securopass1",
+  "version": "1.0.50",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/index.ts"
+  },
+  "prisma": {
+    "schema": "./prisma/models"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.2.0",
+    "@prisma/extension-accelerate": "^3.0.1",
+    "elysia": "latest",
+    "prisma-merge-schema": "^1.0.0"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "prisma": "^7.2.0"
+  },
+  "module": "src/index.js"
+}

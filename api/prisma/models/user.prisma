@@ -1,0 +1,23 @@
+model User {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  email String @unique
+  name String
+  hashedpwd String
+  randompwd String
+  isTempPwd Boolean @default(false)
+  passwordchangeAt DateTime?
+  profileImage String @default("https://example.com/default-profile.png")
+  platformRole PlatformRole @default(USER)
+  member OrganizationUser[]
+  passes Passes[]
+  eventTeams EventTeam[]
+}
+
+enum PlatformRole {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+  USER
+}

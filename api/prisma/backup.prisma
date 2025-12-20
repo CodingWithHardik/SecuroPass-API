@@ -1,0 +1,154 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output = "./prisma-generated"
+	engineType = "client"
+	runtime = "bun"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  email String @unique
+  name String
+  hashedpwd String
+  randompwd String
+  isTempPwd Boolean @default(false)
+  passwordchangeAt DateTime?
+  profileImage String @default("https://example.com/default-profile.png")
+  platformRole PlatformRole @default(USER)
+  member OrganizationUser[]
+  passes Passes[]
+  eventTeams EventTeam[]
+}
+
+model Organization {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name String
+  description String?
+  profileImage String @default("https://example.com/default-org-profile.png")
+  bannerImage String @default("https://example.com/default-org-banner.png")
+  location String?
+  locationLongitude Float?
+  locationLatitude Float?
+  website String?
+  members OrganizationUser[]
+  passes Events[]
+}
+
+model OrganizationUser {
+  id String @id @default(cuid())
+  joinedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organizationId String
+  userId String
+  role OrgRole @default(MEMBER)
+  user User @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  events Events[]
+  passes Passes[]
+  eventTeams EventTeam[]
+}
+
+model Events {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name String
+  description String?
+  date DateTime
+  time DateTime
+  location String
+  locationLongitude Float
+  locationLatitude Float
+  bannerImage String @default("https://example.com/default-event-banner.png")
+  bannerLogoImage String @default("https://example.com/default-event-logo.png")
+  generatedById String
+  organizationId String
+  passes Passes[]
+  eventTeam EventTeam[]
+  organization Organization @relation(fields: [organizationId], references: [id])
+  generatedBy OrganizationUser @relation(fields: [generatedById], references: [id])
+}
+
+model EventTeam {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  eventId String
+  userId String
+  addedById String
+  role TeamRole @default(PASSES_SCANNER)
+  addedBy OrganizationUser @relation(fields: [addedById], references: [id])
+  event Events @relation(fields: [eventId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+  passes Passes[]
+}
+
+model Passes {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  code String @unique
+  isUsed Boolean @default(false)
+  usedAt DateTime?
+  isRevoked Boolean @default(false)
+  revokedAt DateTime?
+  validUntil DateTime
+  validFrom DateTime
+  passesStatus PassesStatus @default(ACTIVE)
+  generatedByOrgUserId String
+  generatedByTeamUserId String
+  eventId String
+  assignedToId String?
+  events Events @relation(fields: [eventId], references: [id])
+  assignedTo User? @relation(fields: [assignedToId], references: [id])
+  generatedBy PassesGenerationBy @default(SYSTEM)
+  genertedByTeam EventTeam @relation(fields: [generatedByTeamUserId], references: [id])
+  genertedByOrg OrganizationUser @relation(fields: [generatedByOrgUserId], references: [id])
+}
+
+enum PlatformRole {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+  USER
+}
+
+enum OrgRole {
+  OWNER
+  SUPER_MANAGER
+  MEMBER
+}
+
+enum TeamRole {
+  MANAGER
+  PASSES_MANAGER
+  PASSES_SHARER
+  PASSES_SCANNER
+}
+
+enum PassesStatus {
+  ACTIVE
+  USED
+  REVOKED
+  EXPIRED
+}
+
+enum PassesGenerationBy {
+  ORGANIZATION_USER
+  EVENT_TEAM_MEMBER
+  SYSTEM
+}

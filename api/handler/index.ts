@@ -3,11 +3,56 @@ import { readdirSync, statSync } from "fs"
 import { join } from "path"
 
 interface RouteHandler {
-    get?: (context: any) => any;
-    post?: (context: any) => any;
-    put?: (context: any) => any;
-    patch?: (context: any) => any;
-    delete?: (context: any) => any;
+    get?: {
+        handler: (context: any) => any;
+        schema?: {
+            params?: any;
+            query?: any;
+            body?: any;
+            response?: any;
+            headers?: any;
+        }
+    } | ((context: any) => any);
+    post?: {
+        handler: (context: any) => any;
+        schema?: {
+            params?: any;
+            query?: any;
+            body?: any;
+            response?: any;
+            headers?: any;
+        }
+    } | ((context: any) => any);
+    put?: {
+        handler: (context: any) => any;
+        schema?: {
+            params?: any;
+            query?: any;
+            body?: any;
+            response?: any;
+            headers?: any;
+        }
+    } | ((context: any) => any);
+    patch?: {
+        handler: (context: any) => any;
+        schema?: {
+            params?: any;
+            query?: any;
+            body?: any;
+            response?: any;
+            headers?: any;
+        }
+    } | ((context: any) => any);
+    delete?: {
+        handler: (context: any) => any;
+        schema?: {
+            params?: any;
+            query?: any;
+            body?: any;
+            response?: any;
+            headers?: any;
+        }
+    } | ((context: any) => any);
 }
 
 function fileNameToRoute(fileName: string): { route: string, isCatchAll: boolean } {
@@ -81,19 +126,49 @@ function processRoute(app: Elysia, filePath: string, routesDir: string, isCatchA
                 }
             }
             if (handler.get) {
-                app.get(`${prefix}/*`, warpHandler(handler.get));
+                const getHandler = typeof handler.get === 'function' ? handler.get : handler.get.handler;
+                const getSchema = typeof handler.get === 'object' ? handler.get.schema : undefined;
+                if (getSchema) {
+                    app.get(`${prefix}/*`, warpHandler(getHandler), getSchema);
+                } else {
+                    app.get(`${prefix}/*`, warpHandler(getHandler));
+                }
                 console.log(`Registered GET ${prefix}/*`);
             } else if (handler.post) {
-                app.post(`${prefix}/*`, warpHandler(handler.post));
+                const postHandler = typeof handler.post === 'function' ? handler.post : handler.post.handler;
+                const postSchema = typeof handler.post === 'object' ? handler.post.schema : undefined;
+                if (postSchema) {
+                    app.post(`${prefix}/*`, warpHandler(postHandler), postSchema);
+                } else {
+                    app.post(`${prefix}/*`, warpHandler(postHandler));
+                }
                 console.log(`Registered POST ${prefix}/*`);
             } else if (handler.put) {
-                app.put(`${prefix}/*`, warpHandler(handler.put));
+                const putHandler = typeof handler.put === 'function' ? handler.put : handler.put.handler;
+                const putSchema = typeof handler.put === 'object' ? handler.put.schema : undefined;
+                if (putSchema) {
+                    app.put(`${prefix}/*`, warpHandler(putHandler), putSchema);
+                } else {
+                    app.put(`${prefix}/*`, warpHandler(putHandler));
+                }
                 console.log(`Registered PUT ${prefix}/*`);
             } else if (handler.patch) {
-                app.patch(`${prefix}/*`, warpHandler(handler.patch));
+                const patchHandler = typeof handler.patch === 'function' ? handler.patch : handler.patch.handler;
+                const patchSchema = typeof handler.patch === 'object' ? handler.patch.schema : undefined;
+                if (patchSchema) {
+                    app.patch(`${prefix}/*`, warpHandler(patchHandler), patchSchema);
+                } else {
+                    app.patch(`${prefix}/*`, warpHandler(patchHandler));
+                }
                 console.log(`Registered PATCH ${prefix}/*`);
             } else if (handler.delete) {
-                app.delete(`${prefix}/*`, warpHandler(handler.delete));
+                const deleteHandler = typeof handler.delete === 'function' ? handler.delete : handler.delete.handler;
+                const deleteSchema = typeof handler.delete === 'object' ? handler.delete.schema : undefined;
+                if (deleteSchema) {
+                    app.delete(`${prefix}/*`, warpHandler(deleteHandler), deleteSchema);
+                } else {
+                    app.delete(`${prefix}/*`, warpHandler(deleteHandler));
+                }
                 console.log(`Registered DELETE ${prefix}/*`);
             }
         } else {
@@ -109,42 +184,102 @@ function processRoute(app: Elysia, filePath: string, routesDir: string, isCatchA
                 }
             }
             if (handler.get) {
-                app.get('*', warpHandler(handler.get));
+                const getHandler = typeof handler.get === 'function' ? handler.get : handler.get.handler;
+                const getSchema = typeof handler.get === 'object' ? handler.get.schema : undefined;
+                if (getSchema) {
+                    app.get('*', warpHandler(getHandler), getSchema);
+                } else {
+                    app.get('*', warpHandler(getHandler));
+                }
                 console.log(`Registered GET * (root catch-all)`);
             } else if (handler.post) {
-                app.post('*', warpHandler(handler.post));
+                const postHandler = typeof handler.post === 'function' ? handler.post : handler.post.handler;
+                const postSchema = typeof handler.post === 'object' ? handler.post.schema : undefined;
+                if (postSchema) {
+                    app.post('*', warpHandler(postHandler), postSchema);
+                } else {
+                    app.post('*', warpHandler(postHandler));
+                }
                 console.log(`Registered POST * (root catch-all)`);
             } else if (handler.put) {
-                app.put('*', warpHandler(handler.put));
+                const putHandler = typeof handler.put === 'function' ? handler.put : handler.put.handler;
+                const putSchema = typeof handler.put === 'object' ? handler.put.schema : undefined;
+                if (putSchema) {
+                    app.put('*', warpHandler(putHandler), putSchema);
+                } else {
+                    app.put('*', warpHandler(putHandler));
+                }
                 console.log(`Registered PUT * (root catch-all)`);
             } else if (handler.patch) {
-                app.patch('*', warpHandler(handler.patch));
+                const patchHandler = typeof handler.patch === 'function' ? handler.patch : handler.patch.handler;
+                const patchSchema = typeof handler.patch === 'object' ? handler.patch.schema : undefined;
+                if (patchSchema) {
+                    app.patch('*', warpHandler(patchHandler), patchSchema);
+                } else {
+                    app.patch('*', warpHandler(patchHandler));
+                }
                 console.log(`Registered PATCH * (root catch-all)`);
             } else if (handler.delete) {
-                app.delete('*', warpHandler(handler.delete));
+                const deleteHandler = typeof handler.delete === 'function' ? handler.delete : handler.delete.handler;
+                const deleteSchema = typeof handler.delete === 'object' ? handler.delete.schema : undefined;
+                if (deleteSchema) {
+                    app.delete('*', warpHandler(deleteHandler), deleteSchema);
+                } else {
+                    app.delete('*', warpHandler(deleteHandler));
+                }
                 console.log(`Registered DELETE * (root catch-all)`);
             }
         }
     } else {
         const routePattern = route;
         if (handler.get) {
-            app.get(route, handler.get);
+            const getHandler = typeof handler.get === 'function' ? handler.get : handler.get.handler;
+            const getSchema = typeof handler.get === 'object' ? handler.get.schema : undefined;
+            if (getSchema) {
+                app.get(route, getHandler, getSchema);
+            } else {
+                app.get(route, getHandler);
+            }
             registeredRoutes.add(routePattern);
             console.log(`Registered GET ${route}`);
         } else if (handler.post) {
-            app.post(route, handler.post);
+            const postHandler = typeof handler.post === 'function' ? handler.post : handler.post.handler;
+            const postSchema = typeof handler.post === 'object' ? handler.post.schema : undefined;
+            if (postSchema) {
+                app.post(route, postHandler, postSchema);
+            } else {
+                app.post(route, postHandler);
+            }
             registeredRoutes.add(routePattern);
             console.log(`Registered POST ${route}`);
         } else if (handler.put) {
-            app.put(route, handler.put);
+            const putHandler = typeof handler.put === 'function' ? handler.put : handler.put.handler;
+            const putSchema = typeof handler.put === 'object' ? handler.put.schema : undefined;
+            if (putSchema) {
+                app.put(route, putHandler, putSchema);
+            } else {
+                app.put(route, putHandler);
+            }
             registeredRoutes.add(routePattern);
             console.log(`Registered PUT ${route}`);
         } else if (handler.patch) {
-            app.patch(route, handler.patch);
+            const patchHandler = typeof handler.patch === 'function' ? handler.patch : handler.patch.handler;
+            const patchSchema = typeof handler.patch === 'object' ? handler.patch.schema : undefined;
+            if (patchSchema) {
+                app.patch(route, patchHandler, patchSchema);
+            } else {
+                app.patch(route, patchHandler);
+            }
             registeredRoutes.add(routePattern);
             console.log(`Registered PATCH ${route}`);
         } else if (handler.delete) {
-            app.delete(route, handler.delete);
+            const deleteHandler = typeof handler.delete === 'function' ? handler.delete : handler.delete.handler;
+            const deleteSchema = typeof handler.delete === 'object' ? handler.delete.schema : undefined;
+            if (deleteSchema) {
+                app.delete(route, deleteHandler, deleteSchema);
+            } else {
+                app.delete(route, deleteHandler);
+            }
             registeredRoutes.add(routePattern);
             console.log(`Registered DELETE ${route}`);
         }

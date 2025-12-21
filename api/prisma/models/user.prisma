@@ -13,6 +13,21 @@ model User {
   member OrganizationUser[]
   passes Passes[]
   eventTeams EventTeam[]
+  encryptionKey EncryptionKey[]
+}
+
+model EncryptionKey {
+  id String @id @default(cuid())
+  user User @relation(fields: [userId], references: [id])
+  userId String
+  publicKey String
+  status EncryptionKeySatus @default(ACTIVE)
+  privateKey String
+}
+
+enum EncryptionKeySatus {
+  ACTIVE
+  REVOKED
 }
 
 enum PlatformRole {

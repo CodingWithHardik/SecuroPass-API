@@ -24,7 +24,9 @@ function fileNameToRoute(fileName: string): { route: string, isCatchAll: boolean
     route = route.replace(/\[([^\]]+)\]/g, ':$1');
     return { route, isCatchAll: false };
 }
-
+function removeRouteGroups(path: string): string {
+    return path.replace(/\([^)]+\)\//g, '');
+}
 function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
     const files = readdirSync(dirPath);
 
@@ -55,7 +57,8 @@ function matchesPattern(path: string, pattern: string): boolean {
 
 function processRoute(app: Elysia, filePath: string, routesDir: string, isCatchAllRoute: boolean = false): void {
     const relativePath = filePath.replace(routesDir, '').replace(/^\//, '');
-    const parts = relativePath.split('/');
+    const pathWithoutGroups = removeRouteGroups(relativePath)
+    const parts = pathWithoutGroups.split('/');
     const routeData = parts.map(part => fileNameToRoute(part));
     const hasCatchAll = routeData.some(r => r.isCatchAll);
     const routeParts = routeData.map(r => r.route);
@@ -65,7 +68,7 @@ function processRoute(app: Elysia, filePath: string, routesDir: string, isCatchA
     if (hasCatchAll) {
         const pathSegments = routeParts.filter(p => p !== '' && !p.startsWith('/*'));
         if (pathSegments.length > 0) {
-            const prefix = `${pathSegments.join('/')}`;
+            const prefix = `/${pathSegments.join('/')}`;
             const warpHandler = (originalHandler: any) => {
                 return (context: any) => {
                     const requestPath = context.path;
@@ -155,6 +158,8 @@ export function registerFileRoutes(app: Elysia, routesDir: string): Elysia {
         depth: number;
         path: string;
         segments: number;
+        hasRouteGroup: boolean;
+        cleanPath: string
     }
     const exactRoutes: RouteInfo[] = [];
     const dynamicRoutes: RouteInfo[] = [];
@@ -162,25 +167,37 @@ export function registerFileRoutes(app: Elysia, routesDir: string): Elysia {
 
     files.forEach(file => {
         const relativePath = file.replace(routesDir, '').replace(/^\//, '');
-        const depth = (relativePath.match(/\//g) || []).length;
-        const segments = relativePath.split('/').length;
+        const hasRouteGroup = /\([^)]+\)/.test(relativePath);
+        const cleanPath = removeRouteGroups(relativePath);
+        const depth = (cleanPath.match(/\//g) || []).length;
+        const segments = cleanPath.split('/').length;
+        const routeInfo = {
+            file,
+            depth,
+            path: relativePath,
+            segments,
+            hasRouteGroup,
+            cleanPath
+        }
         if (file.includes('[...')) {
-            catchAllRoutes.push({ file, depth, path: relativePath, segments });
+            catchAllRoutes.push(routeInfo);
         } else if (file.includes('[') && file.includes(']')) {
-            dynamicRoutes.push({ file, depth, path: relativePath, segments });
+            dynamicRoutes.push(routeInfo);
         } else {
-            exactRoutes.push({ file, depth, path: relativePath, segments });
+            exactRoutes.push(routeInfo);
         }
     });
 
-    const sortByDepthAndSegments = (a: RouteInfo, b: RouteInfo) => {
+    const sortByPriority = (a: RouteInfo, b: RouteInfo) => {
+        if (!a.hasRouteGroup && b.hasRouteGroup) return -1;
+        if (a.hasRouteGroup && !b.hasRouteGroup) return 1;
         if (a.depth !== b.depth) return b.depth - a.depth;
         return b.segments - a.segments;
     };
 
-    exactRoutes.sort(sortByDepthAndSegments);
-    dynamicRoutes.sort(sortByDepthAndSegments);
-    catchAllRoutes.sort(sortByDepthAndSegments);
+    exactRoutes.sort(sortByPriority);
+    dynamicRoutes.sort(sortByPriority);
+    catchAllRoutes.sort(sortByPriority);
 
     exactRoutes.forEach(({ file }) => {
         processRoute(app, file, routesDir);

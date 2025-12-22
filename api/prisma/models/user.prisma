@@ -24,8 +24,8 @@ model Devices {
   userAgent String
   ipAddress String
   token String @unique
-  icodev String
-  ivcode String
+  icodev String @unique
+  ivcode String @unique
   userId String
   status DeviceStatus @default(ACTIVE)
   user User @relation(fields: [userId], references: [id])

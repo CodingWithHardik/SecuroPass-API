@@ -3,6 +3,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   email String @unique
+  emailVerified Boolean @default(false)
   name String
   hashedpwd String
   randompwd String
@@ -13,19 +14,24 @@ model User {
   member OrganizationUser[]
   passes Passes[]
   eventTeams EventTeam[]
-  encryptionKey EncryptionKey[]
+  devices Devices[]
 }
 
-model EncryptionKey {
+model Devices {
   id String @id @default(cuid())
-  user User @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userAgent String
+  ipAddress String
+  token String @unique
+  icodev String
+  ivcode String
   userId String
-  publicKey String
-  status EncryptionKeySatus @default(ACTIVE)
-  privateKey String
+  status DeviceStatus @default(ACTIVE)
+  user User @relation(fields: [userId], references: [id])
 }
 
-enum EncryptionKeySatus {
+enum DeviceStatus {
   ACTIVE
   REVOKED
 }
@@ -34,5 +40,6 @@ enum PlatformRole {
   SUPER_ADMIN
   ADMIN
   MODERATOR
+  ENTERPRISE_USER
   USER
 }

@@ -9,12 +9,18 @@
     "schema": "./prisma/models"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "@prisma/extension-accelerate": "^3.0.1",
+    "@types/bcrypt": "^6.0.0",
+    "dotenv": "^17.2.3",
     "elysia": "latest",
+    "jsonwebtoken": "^9.0.3",
     "prisma-merge-schema": "^1.0.0"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "bcrypt": "^6.0.0",
     "bun-types": "latest",
     "prisma": "^7.2.0"
   },

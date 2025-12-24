@@ -55,7 +55,6 @@ interface RouteHandler {
         }
     } | ((context: any) => any);
 }
-
 function fileNameToRoute(fileName: string): { route: string, isCatchAll: boolean } {
     let route = fileName.replace(/\.(ts|js)$/, '');
     if (route === 'index') {
@@ -86,7 +85,6 @@ function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
     })
     return arrayOfFiles;
 }
-
 function matchesPattern(path: string, pattern: string): boolean {
     const patternParts = pattern.split('/').filter(Boolean);
     const pathParts = path.split('/').filter(Boolean);
@@ -98,7 +96,6 @@ function matchesPattern(path: string, pattern: string): boolean {
     }
     return true;
 }
-
 function applyMiddleware(app: Elysia, middleware: any | any[]): Elysia {
     if (Array.isArray(middleware)) {
         middleware.forEach(mw => { app.use(mw) });
@@ -107,7 +104,40 @@ function applyMiddleware(app: Elysia, middleware: any | any[]): Elysia {
     }
     return app;
 }
+async function collectMiddlewareChain(filePath:string, routesDir: string): Promise<any[]> {
+    const middlewareChain: any[] = [];
+    const relativePath = filePath.replace(routesDir, '').replace(/^\//, '');
+    const pathParts = relativePath.split('/');
 
+    for (let i = 0; i < pathParts.length - 1; i++) {
+        const parentPath = pathParts.slice(0, i + 1).join('/');
+        const parentDir = join(routesDir, parentPath);
+        try {
+            let filesInDir = readdirSync(parentDir);
+            for (const file of filesInDir) {
+                if (file.match(/\.(ts|js)$/) && !statSync(join(parentDir, file)).isDirectory()) {
+                    const fullPath = join(parentDir, file);
+                    try {
+                        const fileModule = await import(fullPath);
+                        const handler: RouteHandler = fileModule.default || fileModule;
+                        if (handler.use) {
+                            if (Array.isArray(handler.use)) {
+                                middlewareChain.push(...handler.use);
+                            } else {
+                                middlewareChain.push(handler.use);
+                            }
+                        }
+                    } catch (error) {
+                        console.log(`Failed to load ${file}:`, error);
+                    }
+                }
+            }
+        } catch (error) {
+            console.log(`Failed to read directory ${parentDir}:`);
+        }
+    }
+    return middlewareChain;
+}
 async function processRoute(app: Elysia, filePath: string, routesDir: string, registeredRoutes: Set<string>, isCatchAllRoute: boolean = false): Promise<void> {
     const relativePath = filePath.replace(routesDir, '').replace(/^\//, '');
     const pathWithoutGroups = removeRouteGroups(relativePath)
@@ -118,11 +148,20 @@ async function processRoute(app: Elysia, filePath: string, routesDir: string, re
     let route = '/' + routeParts.filter(p => p !== '').join('/');
     const module = await import(filePath);
     const handler: RouteHandler = module.default || module;
+    const parentMiddleware = await collectMiddlewareChain(filePath, routesDir);
 
     let routeApp = app;
+    const allMiddleware = [...parentMiddleware];
     if (handler.use) {
+        if (Array.isArray(handler.use)) {
+            allMiddleware.push(...handler.use);
+        } else {
+            allMiddleware.push(handler.use);
+        }
+    }
+    if (allMiddleware.length > 0) {
         routeApp = new Elysia();
-        applyMiddleware(routeApp, handler.use);
+        applyMiddleware(routeApp, allMiddleware);
     }
 
     if (hasCatchAll) {
@@ -311,12 +350,10 @@ async function processRoute(app: Elysia, filePath: string, routesDir: string, re
             console.log(`Registered DELETE ${route} ${handler.use ? '(with middleware)' : ''}`);
         }
     }
-
-    if (handler.use && routeApp !== app) {
+    if (allMiddleware.length > 0 && routeApp !== app) {
         app.use(routeApp);
     }
 }
-
 export async function registerFileRoutes(app: Elysia, routesDir: string): Promise<Elysia> {
     const registeredRoutes = new Set<string>();
     const files = getAllFiles(routesDir);

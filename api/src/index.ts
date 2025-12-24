@@ -5,7 +5,7 @@ import "dotenv/config";
 
 const app = new Elysia();
 
-registerFileRoutes(app, join(__dirname, ""))
+await registerFileRoutes(app, join(__dirname, ""))
 
 app.get("/", ({ redirect }: { redirect: (url: string) => void }) => {
   const url: string = process.env.MAIN_WEBSITE_URL || "";

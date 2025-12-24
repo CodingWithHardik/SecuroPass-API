@@ -3,6 +3,7 @@ import { readdirSync, statSync } from "fs"
 import { join } from "path"
 
 interface RouteHandler {
+    use?: any | any[];
     get?: {
         handler: (context: any) => any;
         schema?: {
@@ -86,8 +87,6 @@ function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
     return arrayOfFiles;
 }
 
-const registeredRoutes = new Set<string>();
-
 function matchesPattern(path: string, pattern: string): boolean {
     const patternParts = pattern.split('/').filter(Boolean);
     const pathParts = path.split('/').filter(Boolean);
@@ -100,7 +99,16 @@ function matchesPattern(path: string, pattern: string): boolean {
     return true;
 }
 
-function processRoute(app: Elysia, filePath: string, routesDir: string, isCatchAllRoute: boolean = false): void {
+function applyMiddleware(app: Elysia, middleware: any | any[]): Elysia {
+    if (Array.isArray(middleware)) {
+        middleware.forEach(mw => { app.use(mw) });
+    } else {
+        app.use(middleware);
+    }
+    return app;
+}
+
+async function processRoute(app: Elysia, filePath: string, routesDir: string, registeredRoutes: Set<string>, isCatchAllRoute: boolean = false): Promise<void> {
     const relativePath = filePath.replace(routesDir, '').replace(/^\//, '');
     const pathWithoutGroups = removeRouteGroups(relativePath)
     const parts = pathWithoutGroups.split('/');
@@ -108,7 +116,14 @@ function processRoute(app: Elysia, filePath: string, routesDir: string, isCatchA
     const hasCatchAll = routeData.some(r => r.isCatchAll);
     const routeParts = routeData.map(r => r.route);
     let route = '/' + routeParts.filter(p => p !== '').join('/');
-    const handler: RouteHandler = require(filePath).default || require(filePath);
+    const module = await import(filePath);
+    const handler: RouteHandler = module.default || module;
+
+    let routeApp = app;
+    if (handler.use) {
+        routeApp = new Elysia();
+        applyMiddleware(routeApp, handler.use);
+    }
 
     if (hasCatchAll) {
         const pathSegments = routeParts.filter(p => p !== '' && !p.startsWith('/*'));
@@ -129,47 +144,51 @@ function processRoute(app: Elysia, filePath: string, routesDir: string, isCatchA
                 const getHandler = typeof handler.get === 'function' ? handler.get : handler.get.handler;
                 const getSchema = typeof handler.get === 'object' ? handler.get.schema : undefined;
                 if (getSchema) {
-                    app.get(`${prefix}/*`, warpHandler(getHandler), getSchema);
+                    routeApp.get(`${prefix}/*`, warpHandler(getHandler), getSchema);
                 } else {
-                    app.get(`${prefix}/*`, warpHandler(getHandler));
+                    routeApp.get(`${prefix}/*`, warpHandler(getHandler));
                 }
-                console.log(`Registered GET ${prefix}/*`);
-            } else if (handler.post) {
+                console.log(`Registered GET ${prefix}/* ${handler.use ? '(with middleware)' : ''}`);
+            } 
+            if (handler.post) {
                 const postHandler = typeof handler.post === 'function' ? handler.post : handler.post.handler;
                 const postSchema = typeof handler.post === 'object' ? handler.post.schema : undefined;
                 if (postSchema) {
-                    app.post(`${prefix}/*`, warpHandler(postHandler), postSchema);
+                    routeApp.post(`${prefix}/*`, warpHandler(postHandler), postSchema);
                 } else {
-                    app.post(`${prefix}/*`, warpHandler(postHandler));
+                    routeApp.post(`${prefix}/*`, warpHandler(postHandler));
                 }
-                console.log(`Registered POST ${prefix}/*`);
-            } else if (handler.put) {
+                console.log(`Registered POST ${prefix}/* ${handler.use ? '(with middleware)' : ''}`);
+            } 
+            if (handler.put) {
                 const putHandler = typeof handler.put === 'function' ? handler.put : handler.put.handler;
                 const putSchema = typeof handler.put === 'object' ? handler.put.schema : undefined;
                 if (putSchema) {
-                    app.put(`${prefix}/*`, warpHandler(putHandler), putSchema);
+                    routeApp.put(`${prefix}/*`, warpHandler(putHandler), putSchema);
                 } else {
-                    app.put(`${prefix}/*`, warpHandler(putHandler));
+                    routeApp.put(`${prefix}/*`, warpHandler(putHandler));
                 }
-                console.log(`Registered PUT ${prefix}/*`);
-            } else if (handler.patch) {
+                console.log(`Registered PUT ${prefix}/* ${handler.use ? '(with middleware)' : ''}`);
+            } 
+            if (handler.patch) {
                 const patchHandler = typeof handler.patch === 'function' ? handler.patch : handler.patch.handler;
                 const patchSchema = typeof handler.patch === 'object' ? handler.patch.schema : undefined;
                 if (patchSchema) {
-                    app.patch(`${prefix}/*`, warpHandler(patchHandler), patchSchema);
+                    routeApp.patch(`${prefix}/*`, warpHandler(patchHandler), patchSchema);
                 } else {
-                    app.patch(`${prefix}/*`, warpHandler(patchHandler));
+                    routeApp.patch(`${prefix}/*`, warpHandler(patchHandler));
                 }
-                console.log(`Registered PATCH ${prefix}/*`);
-            } else if (handler.delete) {
+                console.log(`Registered PATCH ${prefix}/* ${handler.use ? '(with middleware)' : ''}`);
+            } 
+            if (handler.delete) {
                 const deleteHandler = typeof handler.delete === 'function' ? handler.delete : handler.delete.handler;
                 const deleteSchema = typeof handler.delete === 'object' ? handler.delete.schema : undefined;
                 if (deleteSchema) {
-                    app.delete(`${prefix}/*`, warpHandler(deleteHandler), deleteSchema);
+                    routeApp.delete(`${prefix}/*`, warpHandler(deleteHandler), deleteSchema);
                 } else {
-                    app.delete(`${prefix}/*`, warpHandler(deleteHandler));
+                    routeApp.delete(`${prefix}/*`, warpHandler(deleteHandler));
                 }
-                console.log(`Registered DELETE ${prefix}/*`);
+                console.log(`Registered DELETE ${prefix}/* ${handler.use ? '(with middleware)' : ''}`);
             }
         } else {
             const warpHandler = (originalHandler: any) => {
@@ -187,47 +206,51 @@ function processRoute(app: Elysia, filePath: string, routesDir: string, isCatchA
                 const getHandler = typeof handler.get === 'function' ? handler.get : handler.get.handler;
                 const getSchema = typeof handler.get === 'object' ? handler.get.schema : undefined;
                 if (getSchema) {
-                    app.get('*', warpHandler(getHandler), getSchema);
+                    routeApp.get('*', warpHandler(getHandler), getSchema);
                 } else {
-                    app.get('*', warpHandler(getHandler));
+                    routeApp.get('*', warpHandler(getHandler));
                 }
-                console.log(`Registered GET * (root catch-all)`);
-            } else if (handler.post) {
+                console.log(`Registered GET * (root catch-all) ${handler.use ? '(with middleware)' : ''}`);
+            } 
+            if (handler.post) {
                 const postHandler = typeof handler.post === 'function' ? handler.post : handler.post.handler;
                 const postSchema = typeof handler.post === 'object' ? handler.post.schema : undefined;
                 if (postSchema) {
-                    app.post('*', warpHandler(postHandler), postSchema);
+                    routeApp.post('*', warpHandler(postHandler), postSchema);
                 } else {
-                    app.post('*', warpHandler(postHandler));
+                    routeApp.post('*', warpHandler(postHandler));
                 }
-                console.log(`Registered POST * (root catch-all)`);
-            } else if (handler.put) {
+                console.log(`Registered POST * (root catch-all) ${handler.use ? '(with middleware)' : ''}`);
+            } 
+            if (handler.put) {
                 const putHandler = typeof handler.put === 'function' ? handler.put : handler.put.handler;
                 const putSchema = typeof handler.put === 'object' ? handler.put.schema : undefined;
                 if (putSchema) {
-                    app.put('*', warpHandler(putHandler), putSchema);
+                    routeApp.put('*', warpHandler(putHandler), putSchema);
                 } else {
-                    app.put('*', warpHandler(putHandler));
+                    routeApp.put('*', warpHandler(putHandler));
                 }
-                console.log(`Registered PUT * (root catch-all)`);
-            } else if (handler.patch) {
+                console.log(`Registered PUT * (root catch-all) ${handler.use ? '(with middleware)' : ''}`);
+            } 
+            if (handler.patch) {
                 const patchHandler = typeof handler.patch === 'function' ? handler.patch : handler.patch.handler;
                 const patchSchema = typeof handler.patch === 'object' ? handler.patch.schema : undefined;
                 if (patchSchema) {
-                    app.patch('*', warpHandler(patchHandler), patchSchema);
+                    routeApp.patch('*', warpHandler(patchHandler), patchSchema);
                 } else {
-                    app.patch('*', warpHandler(patchHandler));
+                    routeApp.patch('*', warpHandler(patchHandler));
                 }
-                console.log(`Registered PATCH * (root catch-all)`);
-            } else if (handler.delete) {
+                console.log(`Registered PATCH * (root catch-all) ${handler.use ? '(with middleware)' : ''}`);
+            } 
+            if (handler.delete) {
                 const deleteHandler = typeof handler.delete === 'function' ? handler.delete : handler.delete.handler;
                 const deleteSchema = typeof handler.delete === 'object' ? handler.delete.schema : undefined;
                 if (deleteSchema) {
-                    app.delete('*', warpHandler(deleteHandler), deleteSchema);
+                    routeApp.delete('*', warpHandler(deleteHandler), deleteSchema);
                 } else {
-                    app.delete('*', warpHandler(deleteHandler));
+                    routeApp.delete('*', warpHandler(deleteHandler));
                 }
-                console.log(`Registered DELETE * (root catch-all)`);
+                console.log(`Registered DELETE * (root catch-all) ${handler.use ? '(with middleware)' : ''}`);
             }
         }
     } else {
@@ -236,57 +259,66 @@ function processRoute(app: Elysia, filePath: string, routesDir: string, isCatchA
             const getHandler = typeof handler.get === 'function' ? handler.get : handler.get.handler;
             const getSchema = typeof handler.get === 'object' ? handler.get.schema : undefined;
             if (getSchema) {
-                app.get(route, getHandler, getSchema);
+                routeApp.get(route, getHandler, getSchema);
             } else {
-                app.get(route, getHandler);
+                routeApp.get(route, getHandler);
             }
             registeredRoutes.add(routePattern);
-            console.log(`Registered GET ${route}`);
-        } else if (handler.post) {
+            console.log(`Registered GET ${route} ${handler.use ? '(with middleware)' : ''}`);
+        } 
+        if (handler.post) {
             const postHandler = typeof handler.post === 'function' ? handler.post : handler.post.handler;
             const postSchema = typeof handler.post === 'object' ? handler.post.schema : undefined;
             if (postSchema) {
-                app.post(route, postHandler, postSchema);
+                routeApp.post(route, postHandler, postSchema);
             } else {
-                app.post(route, postHandler);
+                routeApp.post(route, postHandler);
             }
             registeredRoutes.add(routePattern);
-            console.log(`Registered POST ${route}`);
-        } else if (handler.put) {
+            console.log(`Registered POST ${route} ${handler.use ? '(with middleware)' : ''}`);
+        } 
+        if (handler.put) {
             const putHandler = typeof handler.put === 'function' ? handler.put : handler.put.handler;
             const putSchema = typeof handler.put === 'object' ? handler.put.schema : undefined;
             if (putSchema) {
-                app.put(route, putHandler, putSchema);
+                routeApp.put(route, putHandler, putSchema);
             } else {
-                app.put(route, putHandler);
+                routeApp.put(route, putHandler);
             }
             registeredRoutes.add(routePattern);
-            console.log(`Registered PUT ${route}`);
-        } else if (handler.patch) {
+            console.log(`Registered PUT ${route} ${handler.use ? '(with middleware)' : ''}`);
+        } 
+        if (handler.patch) {
             const patchHandler = typeof handler.patch === 'function' ? handler.patch : handler.patch.handler;
             const patchSchema = typeof handler.patch === 'object' ? handler.patch.schema : undefined;
             if (patchSchema) {
-                app.patch(route, patchHandler, patchSchema);
+                routeApp.patch(route, patchHandler, patchSchema);
             } else {
-                app.patch(route, patchHandler);
+                routeApp.patch(route, patchHandler);
             }
             registeredRoutes.add(routePattern);
-            console.log(`Registered PATCH ${route}`);
-        } else if (handler.delete) {
+            console.log(`Registered PATCH ${route} ${handler.use ? '(with middleware)' : ''}`);
+        }
+        if (handler.delete) {
             const deleteHandler = typeof handler.delete === 'function' ? handler.delete : handler.delete.handler;
             const deleteSchema = typeof handler.delete === 'object' ? handler.delete.schema : undefined;
             if (deleteSchema) {
-                app.delete(route, deleteHandler, deleteSchema);
+                routeApp.delete(route, deleteHandler, deleteSchema);
             } else {
-                app.delete(route, deleteHandler);
+                routeApp.delete(route, deleteHandler);
             }
             registeredRoutes.add(routePattern);
-            console.log(`Registered DELETE ${route}`);
+            console.log(`Registered DELETE ${route} ${handler.use ? '(with middleware)' : ''}`);
         }
+    }
+
+    if (handler.use && routeApp !== app) {
+        app.use(routeApp);
     }
 }
 
-export function registerFileRoutes(app: Elysia, routesDir: string): Elysia {
+export async function registerFileRoutes(app: Elysia, routesDir: string): Promise<Elysia> {
+    const registeredRoutes = new Set<string>();
     const files = getAllFiles(routesDir);
     interface RouteInfo {
         file: string;
@@ -334,14 +366,15 @@ export function registerFileRoutes(app: Elysia, routesDir: string): Elysia {
     dynamicRoutes.sort(sortByPriority);
     catchAllRoutes.sort(sortByPriority);
 
-    exactRoutes.forEach(({ file }) => {
-        processRoute(app, file, routesDir);
-    })
-    dynamicRoutes.forEach(({ file }) => {
-        processRoute(app, file, routesDir);
-    })
-    catchAllRoutes.forEach(({ file }) => {
-        processRoute(app, file, routesDir);
-    });
+    for (const { file } of exactRoutes) {
+        await processRoute(app, file, routesDir, registeredRoutes);
+    }
+    for (const { file } of dynamicRoutes) {
+        await processRoute(app, file, routesDir, registeredRoutes);
+    }
+    for (const { file } of catchAllRoutes) {
+        await processRoute(app, file, routesDir, registeredRoutes);
+    }
+    
     return app;
 }

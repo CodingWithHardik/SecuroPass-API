@@ -10,6 +10,7 @@ export default {
                 context.set.status = 401;
                 throw new Error("Unauthorized");
             }
+            
             return {
                 userId: result.device.user.id,
                 user: result.device.user,

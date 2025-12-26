@@ -13,6 +13,8 @@ model Passes {
   generatedByOrgUserId String
   generatedByTeamUserId String
   eventId String
+  passUses Int @default(1)
+  passTier String
   assignedToId String?
   events Events @relation(fields: [eventId], references: [id])
   assignedTo User? @relation(fields: [assignedToId], references: [id])

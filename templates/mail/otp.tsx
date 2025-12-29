@@ -2,14 +2,14 @@ import { Row, Html, Head, Tailwind, Img, Container, Column, Text, Button } from 
 
 export default function OTP_template() {
     return (
-        <Tailwind>
-            <Html>
-                <Head>
-                    <title>Your One-Time Password (OTP)</title>
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                    <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
-                </Head>
-                <Container className="max-w-[728px] mt-8">
+        <Html>
+            <Head>
+                <title>Your One-Time Password (OTP)</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+            </Head>
+            <Tailwind>
+                <Container className="max-w-full mt-8">
                     <Container className="text-center">
                         <Img
                             src="https://cdn.dpskmun.com/panelixor/black_no_bg.png"
@@ -62,7 +62,7 @@ export default function OTP_template() {
                         </Container>
                     </Row>
                 </Container>
-            </Html>
-        </Tailwind>
+            </Tailwind>
+        </Html>
     );
 }

@@ -13,8 +13,12 @@ app.get("/", ({ redirect }: { redirect: (url: string) => void }) => {
   return redirect(url);
 });
 
-app.listen(process.env.PORT || 3000);
+app.listen(process.env.PORT || 3000)
+console.log(`SecuroPass API is Running on ${app.server?.hostname}:${app.server?.port}`);
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-);
+process.on("rejectionHandled", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception thrown:", err);
+});

@@ -44,3 +44,4 @@ package-lock.json
 /src/generated/prisma
 /prisma/prisma-generated
 /prisma/migrations
+bun.lock

@@ -17,7 +17,7 @@
     "dotenv": "^17.2.3",
     "elysia": "latest",
     "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^7.0.12",
+    "nodemailer": "^8.0.4",
     "prisma-merge-schema": "^1.0.0"
   },
   "devDependencies": {

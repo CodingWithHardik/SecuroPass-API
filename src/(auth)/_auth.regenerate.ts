@@ -57,7 +57,7 @@ export default {
                 passwordchangeAt: device.user.passwordchangeAt,
                 role: device.user.platformRole,
                 reftoken: device.token,
-                exp: Date.now() + 3 * 24 * 60 * 60 * 1000
+                tokenExpiry: Date.now() + 3 * 24 * 60 * 60 * 1000
             }
             const clipher = crypto.createCipheriv("aes-256-cbc", key, ivcode)
             let encrypted = clipher.update(JSON.stringify(data), 'utf8', 'hex')

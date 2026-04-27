@@ -80,7 +80,7 @@ export default {
                 passwordchangeAt: createdUser.passwordchangeAt,
                 role: createdUser.platformRole,
                 reftoken: exptoken,
-                exp: Date.now() + 3 * 24 * 60 * 60 * 1000
+                tokenExpiry: Date.now() + 3 * 24 * 60 * 60 * 1000
             }
             let encrypted = clipher.update(JSON.stringify(data), 'utf8', 'hex')
             encrypted += clipher.final('hex');
